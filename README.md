@@ -35,7 +35,7 @@ Any user who has DGX can claim ownership of a Bullionix NFT by sending their DGX
 contract to back the NFT with DGX. This NFT would have ownership of DGX so if its sold or
 traded, the new owner can claim the previously staked DGX for themselves at any point.
 
-**Potential Risk Areas and Corresponding Solutions:
+**Potential Risk Areas and Corresponding Solutions:**
 
 Owner Functions and ‘god power’ abuse**
 Limit functionality for admin, only to do what is needed, without access to change user/address
