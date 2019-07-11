@@ -20,7 +20,6 @@ PDF of Userflow: [Userflow Raw](http://raw.githubusercontent.com/Bullionix/Bulli
 
 #### 2. Security concerns and outlining/brainstorming
 
-# Bullionix Smart Contract
 
 # Security Concerns
 
