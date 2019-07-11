@@ -10,13 +10,13 @@
 
 ### Bullionix Phase 1 Deliverables 
 #### 1. Userflow chart and architecture design 
-<img src="https://raw.githubusercontent.com/Bullionix/Bullionix_phase1/master/userflow.png"
+<img src="https://raw.githubusercontent.com/Bullionix/Bullionix_phase1/master/Phase_1/userflow.png"
      alt="Userflow"
      />
 <object width="400" height="500" type="application/pdf" data="https://docs.google.com/viewer?url=http://raw.githubusercontent.com/Bullionix/Bullionix_phase1/master/UserFlowChart.pdf">
 </object>
 
-PDF of Userflow: [Userflow Raw](http://raw.githubusercontent.com/Bullionix/Bullionix_phase1/master/UserFlowChart.pdf)
+PDF of Userflow: [Userflow Raw](http://raw.githubusercontent.com/Bullionix/Bullionix_phase1/master/Phase_1/UserFlowChart.pdf)
 
 #### 2. Security concerns and outlining/brainstorming
 
