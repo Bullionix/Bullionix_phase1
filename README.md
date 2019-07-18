@@ -50,3 +50,10 @@ Hardware wallet accounts as admin and owner.
 See document: [Security Concerns](http://raw.githubusercontent.com/Bullionix/Bullionix_phase1/master/UserFlowChart.pdf)
 
 #### 3. Smart contract architecture UML
+
+
+This is a diagram and flow of the proposed outline for the smart contract. This document is subject to change, and should be updated as the smart contract is being finalized and built. 
+<img src="https://raw.githubusercontent.com/Bullionix/Bullionix_phase1/master/uml.jpg"
+     alt="Proposed structure"
+     />
+See UML chart: [UML](https://raw.github.com/Bullionix/Bullionix_phase1/master/Phase_1/Smart_contract_uml.pdf)
