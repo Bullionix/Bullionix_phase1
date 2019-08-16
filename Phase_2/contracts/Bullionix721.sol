@@ -3,14 +3,15 @@ pragma solidity >=0.4.22 <0.6.0;
 import 'openzeppelin-solidity/contracts/token/ERC721/ERC721full.sol';
 import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
 
-contract BullionixGenerator is ERC721Full, Ownable {
-    
+contract BullionixGenerator is Ownable, ERC721Full {
+bool public IsOnline = false;
+address public DGXContract1 = ""; //To be filled in
+uint256 public DGXFees = ""; //To be filled in
 string public name = "Bullionix";
 string public title = "";  //To be filled in
 string public symbol = ""; //To be filled in
-address public DGXContract1 = ""; //To be filled in
-uint256 public DGXFees = ""; //To be filled in
-bool public IsOnline = false;
+
+
 
  mapping(uint256 => uint256) public StakedValue;
 
@@ -28,7 +29,7 @@ bool public IsOnline = false;
     }
 
      
-/*
+/* @dev Events
 *-----Events-------*
 * New Series Made
 * Staked to token
@@ -37,6 +38,9 @@ bool public IsOnline = false;
 * Not proper amount
 * Not Approved
 * Already Staked
-/*
+*/
+event NewSeries(address indexed _sender, uint256 indexed _tokenId);
+event Staked(address indexed _sender, uint256 indexed _amount, uint256 indexed _tokenId);
+event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed _tokenId);
 
 }
