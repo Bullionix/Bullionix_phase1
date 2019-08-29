@@ -1,16 +1,16 @@
-
 pragma solidity >=0.4.22 <0.6.0;
 import 'openzeppelin-solidity/contracts/token/ERC721/ERC721full.sol';
 import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
-import "./ERC721Enumerable.sol";
-import "./ERC721Metadata.sol";
-import "./ERC721MetadataMintable.sol";
-import "./MinterRole.sol";
+import 'openzeppelin-solidity/contracts/token/ERC721/IERC721Enumerable.sol';
+import 'openzeppelin-solidity/contracts/token/ERC721/IERC721Metadata.sol';
+import 'openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol';
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 
 
-contract BullionixGenerator is ERC721Enumerable, ERC721Metadata, Ownable, MinterRole{
 
+contract BullionixGenerator is ERC721Enumerable, ERC721Metadata, Ownable{
+using SafeMath for uint256;
 /*
 * @dev Beginning state and init values
 **/
@@ -51,7 +51,15 @@ event NewSeries(address indexed _sender, uint256 indexed _tokenId);
 event Staked(address indexed _sender, uint256 indexed _amount, uint256 indexed _tokenId);
 event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed _tokenId);
 
-
+/*
+TODO:
+        - Need to add admin abilities to owner.sol
+        - Make Admin storage here and make admin only modifiers or use owner
+        - Allow for admin to make new data series
+        - Figure out data structure for each new series
+        - Create asset to series
+        -
+*/
 /* 
 * @dev changes online status to disable contract, must be current owner
 *
@@ -63,7 +71,7 @@ event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed 
   * @dev Gets the total amount of tokens owned by the sender
   * @return uint[] with the id of each token owned
   */
-function viewYourTokens() public view  returns (uint256[] _yourTokens){
+function viewYourTokens() public view  returns (uint256[] memory _yourTokens){
        return super._tokensOfOwner(msg.sender);
 }
 }
