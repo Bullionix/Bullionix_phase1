@@ -21,7 +21,7 @@ string public name = "Bullionix";
 string public title = "";  //To be filled in
 string public symbol = ""; //To be filled in
 string public version = "Bullionix v0.1";
-
+string public preURL = "https://bullionix.io/metadata" //metadata url to save gas
 
 mapping(uint256 => uint256) public StakedValue;
 
@@ -58,6 +58,14 @@ TODO:
         - Allow for admin to make new data series
         - Figure out data structure for each new series
         - Create asset to series
+
+        Data Structure: 
+        struct {
+                string url
+                uint numberInSeries
+                uint DGX cost
+                uint fee
+        }
         -
 */
 /* 
@@ -67,6 +75,16 @@ TODO:
  function toggleOnline() public onlyOwner {
          isOnline = !isOnline;
  }
+
+
+ /* 
+* @dev Create a new series
+*
+**/
+ function createNewSeries() public onlyOwner {
+         isOnline = !isOnline;
+ }
+
 /*
   * @dev Gets the total amount of tokens owned by the sender
   * @return uint[] with the id of each token owned
