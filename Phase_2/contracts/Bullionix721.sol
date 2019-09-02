@@ -1,11 +1,12 @@
 pragma solidity >=0.4.22 <0.6.0;
-import 'openzeppelin-solidity/contracts/token/ERC721/ERC721full.sol';
-import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
-import 'openzeppelin-solidity/contracts/token/ERC721/IERC721Enumerable.sol';
-import 'openzeppelin-solidity/contracts/token/ERC721/IERC721Metadata.sol';
-import 'openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol';
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
+import './ERC721Full.sol';
+import './Ownable.sol';
+import './IERC721Enumerable.sol';
+import './IERC721Metadata.sol';
+import './ERC721MetadataMintable.sol';
+import './SafeMath.sol';
+import './MinterRole.sol';
 
 
 
@@ -15,13 +16,13 @@ using SafeMath for uint256;
 * @dev Beginning state and init values
 **/
 bool public isOnline = false;
-address public DGXContract1 = ""; //To be filled in
-uint256 public DGXFees = ""; //To be filled in
+address public DGXContract1 = address(0x0); //To be filled in
+uint256 public DGXFees = 0; //To be filled in
 string public name = "Bullionix";
 string public title = "";  //To be filled in
 string public symbol = ""; //To be filled in
 string public version = "Bullionix v0.1";
-string public preURL = "https://bullionix.io/metadata" //metadata url to save gas
+string public preURL = "https://bullionix.io/metadata"; //metadata url to save gas
 
 mapping(uint256 => uint256) public StakedValue;
 
@@ -30,7 +31,7 @@ mapping(uint256 => uint256) public StakedValue;
 * @dev Constructor, Sets state
 **/
 constructor() public ERC721Metadata(name, symbol){
-        if (address(X) != 0x0 && address(Y) != 0x0) {
+        if (address(DGXContract1) != address(0x0)) {
 /*set addresses*/
             isOnline = true;
         }
@@ -82,7 +83,7 @@ TODO:
 *
 **/
  function createNewSeries() public onlyOwner {
-         isOnline = !isOnline;
+      //todo
  }
 
 /*
@@ -92,4 +93,24 @@ TODO:
 function viewYourTokens() public view  returns (uint256[] memory _yourTokens){
        return super._tokensOfOwner(msg.sender);
 }
+
+// Internals 
+
+ /* function _listingIdExists (bytes32 listingId)
+    internal view returns (bool)
+  {
+    Listing memory listing = _listingByListingId(listingId);
+    return (listing.owner != address(0));
+  }*/
+/*
+  * @dev IsAdmin checks if address is the admin
+  * @return Bool 
+  */
+  function _isAdmin(address _admin)
+    internal view returns (bool)
+  {
+      
+    // TODO: Implement better admin priviledge
+    return (owner() == _admin);
+  }
 }
