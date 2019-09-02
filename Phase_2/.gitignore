@@ -1,7 +1,10 @@
 # See https://help.github.com/ignore-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+/node_modules/openzeppelin-solidity/build
+/node_modules/openzeppelin-solidity/test
+/node_modules/openzeppelin-solidity/contracts/*/*
+!node_modules/openzeppelin-solidity/contracts/token/ERC721
 
 # testing
 /coverage

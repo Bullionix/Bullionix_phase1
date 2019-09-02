@@ -6,7 +6,7 @@ import './IERC721Enumerable.sol';
 import './IERC721Metadata.sol';
 import './ERC721MetadataMintable.sol';
 import './SafeMath.sol';
-import './MinterRole.sol';
+
 
 
 
@@ -82,8 +82,9 @@ TODO:
 * @dev Create a new series
 *
 **/
- function createNewSeries() public onlyOwner {
-      //todo
+ function createNewSeries(string memory url, uint256 numberToMint, uint256 DGXcost) public onlyOwner {
+      //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
+      
  }
 
 /*
