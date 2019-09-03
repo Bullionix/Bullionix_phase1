@@ -25,7 +25,12 @@ string public version = "Bullionix v0.1";
 string public preURL = "https://bullionix.io/metadata"; //metadata url to save gas
 
 mapping(uint256 => uint256) public StakedValue;
-
+struct tokenData {
+                string url;
+                uint256 numberInSeries;
+                uint256 DGXcost;
+                uint256 fee;
+        }
 /*
 * @dev Constructor() and storge init
 * @dev Constructor, Sets state
@@ -84,7 +89,8 @@ TODO:
 **/
  function createNewSeries(string memory url, uint256 numberToMint, uint256 DGXcost) public onlyOwner {
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
-      
+      require(msg.sender == owner(), 'Only Owner'); //optional as onlyOwner Modifier is used 
+
  }
 
 /*
@@ -93,6 +99,12 @@ TODO:
   */
 function viewYourTokens() public view  returns (uint256[] memory _yourTokens){
        return super._tokensOfOwner(msg.sender);
+}
+
+function returnUrl() internal view returns (uint256 _tokenId, string memory _URL){
+   require(super._exists(_tokenId), "ERC721: approved query for nonexistent token");
+  string url memory = _tokenURIs[_tokenId];
+   return preURL +  url
 }
 
 // Internals 
