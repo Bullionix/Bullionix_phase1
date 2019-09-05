@@ -132,7 +132,7 @@ function viewYourTokens() public view  returns (uint256[] memory _yourTokens){
   */
 function returnURL(uint256 _tokenId) public view returns (string memory _URL){
    require(_exists(_tokenId), "ERC721: approved query for nonexistent token");
-   string memory uri = this.tokenURI(_tokenId);
+   string memory uri = seriesToTokenId[_tokenId].url;
    return string(abi.encodePacked("https://bullionix.io/metadata", uri));
 }
 
