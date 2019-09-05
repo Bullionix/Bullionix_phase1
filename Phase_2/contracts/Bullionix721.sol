@@ -12,6 +12,11 @@ import './IERC20.sol';
 
 
 contract BullionixGenerator is ERC721Enumerable, ERC721Metadata, Ownable{
+    
+    modifier isActive{
+    require(isOnline == true);
+    _;
+    }
 using SafeMath for uint256;
 /*
 * @dev Beginning state and init values
@@ -107,7 +112,7 @@ TODO:
 * @dev Stake to series and mint tokens 
 *
 **/
- function stake(uint256 _tokenToBuy) public payable  returns (bool){
+ function stake(uint256 _tokenToBuy) public payable isActive returns (bool){
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
       require(seriesToTokenId[_tokenToBuy].fee >= 0, "Doesn't Exist yet!");
       uint256  tempValue = seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee);
