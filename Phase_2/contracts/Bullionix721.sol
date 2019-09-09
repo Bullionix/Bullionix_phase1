@@ -9,9 +9,7 @@ import './SafeMath.sol';
 import './IERC20.sol';
 
 
-
-
-contract BullionixGenerator is ERC721Enumerable, ERC721MetadataMintable{
+contract BullionixGenerator is ERC721Enumerable, ERC721MetadataMintable, Ownable{
     
     modifier isActive{
     require(isOnline == true);
@@ -22,7 +20,7 @@ using SafeMath for uint256;
 * @dev Beginning state and init values
 **/
 bool public isOnline = false;
-address public DGXContract1 = address(0x0); //To be filled in
+address public DGXContract = address(0x0); //To be filled in
 uint256 public DGXFees = 0; //To be filled in
 string public name = "Bullionix";
 string public title = "";  //To be filled in
@@ -43,8 +41,7 @@ struct seriesData {
 * @dev Constructor, Sets state
 **/
 constructor() public ERC721Metadata(name, symbol){
-        if (address(DGXContract1) != address(0x0)) {
-/*set addresses*/
+        if (address(DGXContract) != address(0x0)) {
             isOnline = true;
         }
 }
@@ -76,7 +73,7 @@ TODO:
      * @param _fee Bullionix fee for generation
      * @return A boolean that indicates if the operation was successful.
      */
- function createNewSeries(string memory _url, uint256 numberToMint, uint256 DGXcost, uint256 _fee) public onlyOwner returns (bool _success){
+ function createNewSeries(string memory _url, uint256 numberToMint, uint256 DGXcost, uint256 _fee) public onlyOwner isActive returns (bool _success){
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
       require(msg.sender == owner(), 'Only Owner'); //optional as onlyOwner Modifier is used 
       uint256 total = totalSupply();
@@ -152,7 +149,7 @@ function returnURL(uint256 _tokenId) public view returns (string memory _URL){
  function _transferFrom (address _owner, uint256 _amount)internal returns (bool)
     
   {
-    require(IERC20(DGXContract1).transferFrom(_owner, address(this), _amount));
+    require(IERC20(DGXContract).transferFrom(_owner, address(this), _amount));
     return true;
   }
 
