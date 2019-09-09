@@ -28,7 +28,7 @@ string public name = "Bullionix";
 string public title = "";  //To be filled in
 string public symbol = ""; //To be filled in
 string public version = "Bullionix v0.1";
-string public preURL = "https://bullionix.io/metadata"; //metadata url to save gas
+string public preURL = "https://bullionix.io/metadata/"; //metadata url to save gas
 mapping(uint256 => uint256) public StakedValue;
 mapping(uint256 => seriesData) public seriesToTokenId;
 struct seriesData {
@@ -104,10 +104,10 @@ TODO:
      
 //TODO: 
 //Create/Mint token and send to buyer
-   string memory fullURL = returnURL(_tokenToBuy);
-   require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL));
-   emit Staked(msg.sender, totalCost, _tokenToBuy);
-   return true;
+     string memory fullURL = returnURL(_tokenToBuy);
+     require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL));
+     emit Staked(msg.sender, totalCost, _tokenToBuy);
+     return true;
  }
 
 
@@ -133,8 +133,8 @@ function viewYourTokens() public view  returns (uint256[] memory _yourTokens){
   * @dev returns the entire tokenURI 
   * @return uint256 with the id of the token
   */
-function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
-   require(_exists(_tokenId), "ERC721: approved query for nonexistent token");
+function returnURL(uint256 _tokenId) public view returns (string memory _URL){
+   require(returnSeriesURL(_tokenId), "ERC721: approved query for nonexistent token");
    string memory uri = seriesToTokenId[_tokenId].url;
    return string(abi.encodePacked("https://bullionix.io/metadata", uri));
 }
@@ -143,6 +143,12 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
   * @dev transfer ERC20 token to contract
   * @return true or false if failed
   */
+  function returnSeriesURL(uint256 _tokenId) internal view returns (bool){
+      string memory temp = seriesToTokenId[_tokenId].url;
+      bytes memory tempEmptyStringTest = bytes(temp);
+      require(tempEmptyStringTest.length >= 1, temp);
+      return true;
+  }
  function _transferFrom (address _owner, uint256 _amount)internal returns (bool)
     
   {
