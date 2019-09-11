@@ -19,6 +19,7 @@ using SafeMath for uint256;
 /*
 * @dev Beginning state and init values
 **/
+IERC20 dgx; 
 bool public isOnline = false;
 address public DGXContract = address(0x0); //To be filled in
 uint256 public DGXFees = 0; //To be filled in
@@ -43,6 +44,7 @@ struct seriesData {
 constructor() public ERC721Metadata(name, symbol){
         if (address(DGXContract) != address(0x0)) {
             isOnline = true;
+            dgx = IERC20(DGXContract);
         }
 }
 
@@ -50,6 +52,7 @@ constructor() public ERC721Metadata(name, symbol){
 event NewSeriesMade(string indexed url, uint256 indexed numberToMint);
 event Staked(address indexed _sender, uint256 indexed _amount, uint256 indexed tokenStaked);
 event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed _tokenId);
+event Withdrawal(address indexed _receiver,  uint256 indexed _amount);
 
 /*
 TODO:
@@ -62,7 +65,7 @@ TODO:
 * @dev changes online status to disable contract, must be current owner
 *
 **/
- function toggleOnline() public onlyOwner {
+ function toggleOnline() external onlyOwner {
          isOnline = !isOnline;
  }
    /**
@@ -97,10 +100,6 @@ TODO:
       require(seriesToTokenId[_tokenToBuy].fee >= 0, "Doesn't Exist yet!");
       uint256  totalCost = seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee);
       _transferFrom(msg.sender, totalCost);
-      
-     
-//TODO: 
-//Create/Mint token and send to buyer
      string memory fullURL = returnURL(_tokenToBuy);
      require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL));
      emit Staked(msg.sender, totalCost, _tokenToBuy);
@@ -108,12 +107,40 @@ TODO:
  }
 
 
-
+  /**
+     * @dev Burns a specific ERC721 token and refunds user the DGX on the NFT
+     * @param tokenId uint256 id of the ERC721 token to be burned.
+     */
+     
+     //TODO: Finalize this function and transfer the DGX back to msg.sender for burning their nft 
+function burn(uint256 tokenId) external {
+        //solhint-disable-next-line max-line-length
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721Burnable: caller is not owner nor approved");
+        _burn(tokenId);
+    }
+    
+      /**
+     * @dev Withdrawals DGX from the balance collected via fees.
+     */
+function withdrawal() onlyOwner
+    public
+  returns (bool){
+    require(isOnline == false);
+    uint256 temp = _checkBalance(); //calls checkBalance which will revert if no balance, if balance pass it into transfer as amount to withdrawal MAX
+    require(dgx.transfer(msg.sender, temp)); 
+    emit Withdrawal(msg.sender, temp);
+    return true;    
+  }
+function _checkBalance() internal view returns (uint256){
+    uint256 tempBalance = dgx.balanceOf(address(this)); //checking balance on DGX contract
+   // require(tempBalance > 0, "Revert: Balance is 0!");  //do I even have a balance? Lets see. If no balance revert. 
+    return tempBalance;  //here is your balance! Fresh off the stove. 
+}
 /*
   * @dev Gets the total amount of tokens owned by the sender
   * @return uint[] with the id of each token owned
   */
-function viewYourTokens() public view  returns (uint256[] memory _yourTokens){
+function viewYourTokens() external view  returns (uint256[] memory _yourTokens){
        return super._tokensOfOwner(msg.sender);
 }
 
@@ -130,10 +157,10 @@ function viewYourTokens() public view  returns (uint256[] memory _yourTokens){
   * @dev returns the entire tokenURI 
   * @return uint256 with the id of the token
   */
-function returnURL(uint256 _tokenId) public view returns (string memory _URL){
-   require(returnSeriesURL(_tokenId), "ERC721: approved query for nonexistent token");
+function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
+   require(returnSeriesURL(_tokenId), "ERC721: approved query for nonexistent token"); //Does this token exist? Lets see. 
    string memory uri = seriesToTokenId[_tokenId].url;
-   return string(abi.encodePacked("https://bullionix.io/metadata", uri));
+   return string(abi.encodePacked("https://bullionix.io/metadata", uri)); //Here is your URL! 
 }
 
   /*
@@ -149,13 +176,11 @@ function returnURL(uint256 _tokenId) public view returns (string memory _URL){
  function _transferFrom (address _owner, uint256 _amount)internal returns (bool)
     
   {
-    require(IERC20(DGXContract).transferFrom(_owner, address(this), _amount));
+    require(dgx.transferFrom(_owner, address(this), _amount));
     return true;
   }
 
-
-  //TODO
- /* function burn(){
-      
-  }*/
+function() payable external{
+    revert();
+}
 }
