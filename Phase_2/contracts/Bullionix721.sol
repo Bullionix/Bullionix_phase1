@@ -21,7 +21,7 @@ using SafeMath for uint256;
 **/
 IERC20 dgx; 
 bool public isOnline = false;
-address public DGXContract = address(0x178b11b1a9d8f022987650b7e549DD84A95a1C29); //To be filled in
+address public DGXContract = address(0xDc544654FEFD1A458eb24064a6C958B14E579154); //To be filled in
 uint256 public DGXFees = 0; //To be filled in
 string public name = "Bullionix";
 string public title = "";  //To be filled in
@@ -71,23 +71,23 @@ TODO:
    /**
      * @dev Create a new series of NFTs.
      * @param _url location of metadata on backend server. Will be tacked onto the end of set url using returnURL().
-     * @param numberToMint  The token number for this series. 10 would make 10 tokens avaliable 
-     * @param DGXcost The amount of DGX to send
+     * @param _numberToMint  The token number for this series. 10 would make 10 tokens avaliable 
+     * @param _DGXcost The amount of DGX to send
      * @param _fee Bullionix fee for generation
      * @return A boolean that indicates if the operation was successful.
      */
- function createNewSeries(string memory _url, uint256 numberToMint, uint256 DGXcost, uint256 _fee) public onlyOwner isActive returns (bool _success){
+ function createNewSeries(string memory _url, uint256 _numberToMint, uint256 _DGXcost, uint256 _fee) public onlyOwner isActive returns (bool _success){
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
       require(msg.sender == owner(), 'Only Owner'); //optional as onlyOwner Modifier is used 
       uint256 total = totalSupply();
-      for(uint i = 0; i < numberToMint; i++){
+      for(uint i = 0; i < _numberToMint; i++){
           seriesToTokenId[total.add(i)].url = _url;
-          seriesToTokenId[total.add(i)].numberInSeries = numberToMint;
-          seriesToTokenId[total.add(i)].DGXcost = DGXcost;
+          seriesToTokenId[total.add(i)].numberInSeries = _numberToMint;
+          seriesToTokenId[total.add(i)].DGXcost = _DGXcost;
           seriesToTokenId[total.add(i)].fee = _fee;
       }
     
-   emit NewSeriesMade(_url, numberToMint);
+   emit NewSeriesMade(_url, _numberToMint);
    return true;
  }
 
@@ -99,7 +99,7 @@ TODO:
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
       require(seriesToTokenId[_tokenToBuy].fee >= 0, "Doesn't Exist yet!");
       uint256  totalCost = seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee);
-      _transferFrom(msg.sender, totalCost);
+      _transferFromDGX(msg.sender, totalCost);
      string memory fullURL = returnURL(_tokenToBuy);
      require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL));
      StakedValue[_tokenToBuy] = seriesToTokenId[_tokenToBuy].DGXcost;
@@ -110,23 +110,23 @@ TODO:
 
   /**
      * @dev Burns a specific ERC721 token and refunds user the DGX on the NFT
-     * @param tokenId uint256 id of the ERC721 token to be burned.
+     * @param _tokenId uint256 id of the ERC721 token to be burned.
      */
      
      //TODO: Finalize this function and transfer the DGX back to msg.sender for burning their nft 
-function burn(uint256 tokenId)external {
+function burn(uint256 _tokenId)external returns (bool){
         //solhint-disable-next-line max-line-length
-        
-        //check that token is ERC721Enumerable
-        //check that you are owner of token
         //check token is staked 
-        //get staked balance
+        require(StakedValue[_tokenId] > 0, "NFT has no stake yet!");
+        //check that you are owner of token
+         require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721Burnable: caller is not owner nor approved");
         //check balance of smart contract
+        require(_checkBalance() >= StakedValue[_tokenId]);
         //transfer 721 to 0x000
+        _burn(_tokenId);
         //transfer dgx from contract to msg.sender
-        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721Burnable: caller is not owner nor approved");
-        
-        _burn(tokenId);
+        require(dgx.transferFrom(address(this), msg.sender, StakedValue[_tokenId]));
+       
     }
     
       /**
@@ -143,7 +143,7 @@ function withdrawal() onlyOwner
   }
 function _checkBalance() internal view returns (uint256){
     uint256 tempBalance = dgx.balanceOf(address(this)); //checking balance on DGX contract
-   // require(tempBalance > 0, "Revert: Balance is 0!");  //do I even have a balance? Lets see. If no balance revert. 
+    require(tempBalance > 0, "Revert: Balance is 0!");  //do I even have a balance? Lets see. If no balance revert. 
     return tempBalance;  //here is your balance! Fresh off the stove. 
 }
 /*
@@ -168,7 +168,7 @@ function viewYourTokens() external view  returns (uint256[] memory _yourTokens){
   * @return uint256 with the id of the token
   */
 function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
-   require(returnSeriesURL(_tokenId), "ERC721: approved query for nonexistent token"); //Does this token exist? Lets see. 
+   require(checkURL(_tokenId), "ERC721: approved query for nonexistent token"); //Does this token exist? Lets see. 
    string memory uri = seriesToTokenId[_tokenId].url;
    return string(abi.encodePacked("https://bullionix.io/metadata", uri)); //Here is your URL! 
 }
@@ -177,13 +177,13 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
   * @dev Returns the URL - internal 
   * @return URL of token with full website attached
   */
-  function returnSeriesURL(uint256 _tokenId) internal view returns (bool){
+  function checkURL(uint256 _tokenId) internal view returns (bool){
       string memory temp = seriesToTokenId[_tokenId].url;
       bytes memory tempEmptyStringTest = bytes(temp);
       require(tempEmptyStringTest.length >= 1, temp);
       return true;
   }
- function _transferFrom (address _owner, uint256 _amount)internal returns (bool)
+ function _transferFromDGX (address _owner, uint256 _amount)internal returns (bool)
     
   {
     require(dgx.transferFrom(_owner, address(this), _amount));
