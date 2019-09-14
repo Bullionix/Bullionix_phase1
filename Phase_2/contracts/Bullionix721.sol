@@ -21,7 +21,7 @@ using SafeMath for uint256;
 **/
 IERC20 dgx; 
 bool public isOnline = false;
-address public DGXContract = address(0x0); //To be filled in
+address public DGXContract = address(0x178b11b1a9d8f022987650b7e549DD84A95a1C29); //To be filled in
 uint256 public DGXFees = 0; //To be filled in
 string public name = "Bullionix";
 string public title = "";  //To be filled in
@@ -102,6 +102,7 @@ TODO:
       _transferFrom(msg.sender, totalCost);
      string memory fullURL = returnURL(_tokenToBuy);
      require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL));
+     StakedValue[_tokenToBuy] = seriesToTokenId[_tokenToBuy].DGXcost;
      emit Staked(msg.sender, totalCost, _tokenToBuy);
      return true;
  }
@@ -113,9 +114,18 @@ TODO:
      */
      
      //TODO: Finalize this function and transfer the DGX back to msg.sender for burning their nft 
-function burn(uint256 tokenId) external {
+function burn(uint256 tokenId)external {
         //solhint-disable-next-line max-line-length
+        
+        //check that token is ERC721Enumerable
+        //check that you are owner of token
+        //check token is staked 
+        //get staked balance
+        //check balance of smart contract
+        //transfer 721 to 0x000
+        //transfer dgx from contract to msg.sender
         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721Burnable: caller is not owner nor approved");
+        
         _burn(tokenId);
     }
     
@@ -164,8 +174,8 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
 }
 
   /*
-  * @dev transfer ERC20 token to contract
-  * @return true or false if failed
+  * @dev Returns the URL - internal 
+  * @return URL of token with full website attached
   */
   function returnSeriesURL(uint256 _tokenId) internal view returns (bool){
       string memory temp = seriesToTokenId[_tokenId].url;
