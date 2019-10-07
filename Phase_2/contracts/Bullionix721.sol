@@ -6,7 +6,7 @@ import './IERC721Enumerable.sol';
 import './IERC721Metadata.sol';
 import './ERC721MetadataMintable.sol';
 import './SafeMath.sol';
-import './IERC20.sol';
+import './DGXinterface.sol';
 
 
 contract BullionixGenerator is ERC721Enumerable, ERC721MetadataMintable, Ownable{
@@ -19,9 +19,9 @@ using SafeMath for uint256;
 /*
 * @dev Beginning state and init values
 **/
-IERC20 dgx; 
+DGXinterface dgx; 
 bool public isOnline = false;
-address public DGXContract = address(0xDc544654FEFD1A458eb24064a6C958B14E579154); //To be filled in
+address payable public DGXContract = 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
 uint256 public DGXFees = 0; //To be filled in
 string public name = "Bullionix";
 string public title = "";  //To be filled in
@@ -36,7 +36,11 @@ struct seriesData {
                 uint256 DGXcost;
                 uint256 fee;
         }
-
+event NewSeriesMade(string indexed url, uint256 indexed numberToMint);
+event Staked(address indexed _sender, uint256 indexed _amount, uint256 indexed tokenStaked);
+event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed _tokenId);
+event Withdrawal(address indexed _receiver,  uint256 indexed _amount);
+event PublishFees(bool _fees, bytes data);
 /*
 * @dev Constructor() and storge init
 * @dev Constructor, Sets state
@@ -44,23 +48,14 @@ struct seriesData {
 constructor() public ERC721Metadata(name, symbol){
         if (address(DGXContract) != address(0x0)) {
             isOnline = true;
-            dgx = IERC20(DGXContract);
+            dgx = DGXinterface(DGXContract);
         }
 }
 
 
-event NewSeriesMade(string indexed url, uint256 indexed numberToMint);
-event Staked(address indexed _sender, uint256 indexed _amount, uint256 indexed tokenStaked);
-event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed _tokenId);
-event Withdrawal(address indexed _receiver,  uint256 indexed _amount);
 
-/*
-TODO:
-      
-        - Allow for admin to make new data series
-        - Create asset to series
 
-*/
+
 /* 
 * @dev changes online status to disable contract, must be current owner
 *
@@ -99,11 +94,19 @@ TODO:
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
       require(seriesToTokenId[_tokenToBuy].fee >= 0, "Doesn't Exist yet!");
       uint256  totalCost = seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee);
-      _transferFromDGX(msg.sender, totalCost);
+      //require transfer to contract succeeds
+      require(_transferFromDGX(msg.sender, totalCost));
+      //get url 
      string memory fullURL = returnURL(_tokenToBuy);
+     //get fees to calculate 
+     uint256 transferFee = fetchTransferFee();
+     uint256 demurrageFee = fetchDemurrageFee();
+     //total fees
+     uint256 feeValue = transferFee.add(demurrageFee);
      require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL));
-     StakedValue[_tokenToBuy] = seriesToTokenId[_tokenToBuy].DGXcost;
-     emit Staked(msg.sender, totalCost, _tokenToBuy);
+     //staked value is set to DGXCost sent by user minus the total fees 
+     StakedValue[_tokenToBuy] = seriesToTokenId[_tokenToBuy].DGXcost.sub(feeValue);
+     emit Staked(msg.sender, StakedValue[_tokenToBuy], _tokenToBuy);
      return true;
  }
 
@@ -130,7 +133,7 @@ function burn(uint256 _tokenId)external returns (bool){
     }
     
       /**
-     * @dev Withdrawals DGX from the balance collected via fees.
+     * @dev Withdrawals DGX from the balance collected via fees only Owner.
      */
 function withdrawal() onlyOwner
     public
@@ -192,5 +195,21 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
 
 function() payable external{
     revert();
+}
+
+function fetchTransferFee() public returns (uint256 rate){
+  
+   (uint256 _base, uint256 _rate, address _collector, bool _no_transfer_fee, uint256 _minimum_transfer_amount) = dgx.showTransferConfigs();
+   
+   return _rate*10**5;
+   
+}
+
+function fetchDemurrageFee() public returns (uint256 rate){
+  
+   (uint256 _base, uint256 _rate, address _collector, bool _no_demurrage_fee) = dgx.showDemurrageConfigs();
+   
+   return _rate*10**5;
+   
 }
 }
