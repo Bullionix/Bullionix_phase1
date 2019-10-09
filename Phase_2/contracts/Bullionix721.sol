@@ -11,7 +11,7 @@ import './DGXinterface.sol';
 
 contract BullionixGenerator is ERC721Enumerable, ERC721MetadataMintable, Ownable{
     
-    modifier isActive{
+modifier isActive{
     require(isOnline == true);
     _;
     }
@@ -21,13 +21,11 @@ using SafeMath for uint256;
 **/
 DGXinterface dgx; 
 bool public isOnline = false;
-address payable public DGXContract = 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
-uint256 public DGXFees = 0; //To be filled in
-string public name = "Bullionix";
-string public title = "";  //To be filled in
-string public symbol = ""; //To be filled in
-string public version = "Bullionix v0.1";
-string public preURL = "https://bullionix.io/metadata/"; //metadata url to save gas
+address payable constant  DGXContract = 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
+string constant  name = "Bullionix";
+string constant  title = "";  //To be filled in
+string constant  symbol = ""; //To be filled in
+string constant  version = "Bullionix v0.2";
 mapping(uint256 => uint256) public StakedValue;
 mapping(uint256 => seriesData) public seriesToTokenId;
 struct seriesData {
@@ -35,15 +33,21 @@ struct seriesData {
                 uint256 numberInSeries;
                 uint256 DGXcost;
                 uint256 fee;
+                bool alive;
         }
+        
+     /*
+* @dev Events
+* @dev Events to read when things happen
+**/
 event NewSeriesMade(string indexed url, uint256 indexed numberToMint);
 event Staked(address indexed _sender, uint256 indexed _amount, uint256 indexed tokenStaked);
 event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed _tokenId);
 event Withdrawal(address indexed _receiver,  uint256 indexed _amount);
-event PublishFees(bool _fees, bytes data);
+event PublishFees(uint256 _Beforefees, uint256 _fee);
 /*
 * @dev Constructor() and storge init
-* @dev Constructor, Sets state
+* @dev Sets state
 **/
 constructor() public ERC721Metadata(name, symbol){
         if (address(DGXContract) != address(0x0)) {
@@ -51,9 +55,6 @@ constructor() public ERC721Metadata(name, symbol){
             dgx = DGXinterface(DGXContract);
         }
 }
-
-
-
 
 
 /* 
@@ -92,21 +93,22 @@ constructor() public ERC721Metadata(name, symbol){
 **/
  function stake(uint256 _tokenToBuy) public payable isActive returns (bool){
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
-      require(seriesToTokenId[_tokenToBuy].fee >= 0, "Doesn't Exist yet!");
-      uint256  totalCost = seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee);
+      require(seriesToTokenId[_tokenToBuy].fee >= 0 && StakedValue[_tokenToBuy] == 0, "Can't stake to this token!");
+      uint256  amountRequired = ((seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee))*10**9);
+        uint256 transferFee = fetchTransferFee();
+       
       //require transfer to contract succeeds
-      require(_transferFromDGX(msg.sender, totalCost));
+      require(_checkAllowance(msg.sender, amountRequired));
+      require(_transferFromDGX(msg.sender, amountRequired));
       //get url 
      string memory fullURL = returnURL(_tokenToBuy);
-     //get fees to calculate 
-     uint256 transferFee = fetchTransferFee();
-     uint256 demurrageFee = fetchDemurrageFee();
-     //total fees
-     uint256 feeValue = transferFee.add(demurrageFee);
+     amountRequired = amountRequired.sub(transferFee);
+     require(amountRequired > transferFee, "Math invalid");
      require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL));
      //staked value is set to DGXCost sent by user minus the total fees 
-     StakedValue[_tokenToBuy] = seriesToTokenId[_tokenToBuy].DGXcost.sub(feeValue);
+     StakedValue[_tokenToBuy] = amountRequired;
      emit Staked(msg.sender, StakedValue[_tokenToBuy], _tokenToBuy);
+     seriesToTokenId[_tokenToBuy].alive = true;
      return true;
  }
 
@@ -117,19 +119,28 @@ constructor() public ERC721Metadata(name, symbol){
      */
      
      //TODO: Finalize this function and transfer the DGX back to msg.sender for burning their nft 
-function burn(uint256 _tokenId)external returns (bool){
+function burn(uint256 _tokenId)public payable returns (bool){
         //solhint-disable-next-line max-line-length
         //check token is staked 
-        require(StakedValue[_tokenId] > 0, "NFT has no stake yet!");
+        require(StakedValue[_tokenId] > 0 && seriesToTokenId[_tokenId].alive, "NFT not burnable yet");
         //check that you are owner of token
          require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721Burnable: caller is not owner nor approved");
         //check balance of smart contract
-        require(_checkBalance() >= StakedValue[_tokenId]);
+          //get fees to calculate 
+     uint256 transferFee = fetchTransferFee();
+     uint256 demurrageFee = fetchDemurrageFee();
+     //total fees
+     uint256 feeValue = transferFee.add(demurrageFee);
+     feeValue = StakedValue[_tokenId].sub(feeValue);
+        require(_checkBalance() >= feeValue, "Balance check failed");
+       require(feeValue < StakedValue[_tokenId], "Fee is more than StakedValue");
+     seriesToTokenId[_tokenId].alive = false;
         //transfer 721 to 0x000
         _burn(_tokenId);
         //transfer dgx from contract to msg.sender
-        require(dgx.transferFrom(address(this), msg.sender, StakedValue[_tokenId]));
-       
+    require(dgx.transfer(msg.sender, feeValue));
+         
+       return true;
     }
     
       /**
@@ -149,6 +160,11 @@ function _checkBalance() internal view returns (uint256){
     require(tempBalance > 0, "Revert: Balance is 0!");  //do I even have a balance? Lets see. If no balance revert. 
     return tempBalance;  //here is your balance! Fresh off the stove. 
 }
+function _checkAllowance(address sender, uint256 amountNeeded) internal view returns (bool){
+    uint256 tempBalance = dgx.allowance(sender, address(this)); //checking balance on DGX contract
+    require(tempBalance >= amountNeeded, "Revert: Balance is 0!");  //do I even have a balance? Lets see. If no balance revert. 
+    return true;  //here is your balance! Fresh off the stove. 
+} 
 /*
   * @dev Gets the total amount of tokens owned by the sender
   * @return uint[] with the id of each token owned
@@ -173,7 +189,7 @@ function viewYourTokens() external view  returns (uint256[] memory _yourTokens){
 function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
    require(checkURL(_tokenId), "ERC721: approved query for nonexistent token"); //Does this token exist? Lets see. 
    string memory uri = seriesToTokenId[_tokenId].url;
-   return string(abi.encodePacked("https://bullionix.io/metadata", uri)); //Here is your URL! 
+   return string(abi.encodePacked("https://bullionix.io/metadata/", uri)); //Here is your URL! 
 }
 
   /*
@@ -186,15 +202,15 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
       require(tempEmptyStringTest.length >= 1, temp);
       return true;
   }
- function _transferFromDGX (address _owner, uint256 _amount)internal returns (bool)
+ function _transferFromDGX (address _owner,  uint256 _amount)internal returns (bool)
     
   {
     require(dgx.transferFrom(_owner, address(this), _amount));
     return true;
   }
 
-function() payable external{
-    revert();
+function() external payable {
+
 }
 
 function fetchTransferFee() public returns (uint256 rate){
