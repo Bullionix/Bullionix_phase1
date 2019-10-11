@@ -22,7 +22,7 @@ using SafeMath for uint256;
 **/
 DGXinterface dgx; 
 bool public isOnline = false;
-address payable constant  DGXContract = 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
+address payable public  DGXContract; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
 string constant  name = "Bullionix";
 string constant  title = "";  //To be filled in
 string constant  symbol = ""; //To be filled in
@@ -49,10 +49,12 @@ event PublishFees(uint256 _Beforefees, uint256 _fee);
 /*
 * @dev Constructor() and storge init
 * @dev Sets state
+* @param Address _DGXAddress is the address of the live DGX token contract
 **/
-constructor() public ERC721Metadata(name, symbol){
-        if (address(DGXContract) != address(0x0)) {
+constructor(address payable _DGXAddress) public ERC721Metadata(name, symbol){
+        if (address(_DGXAddress) != address(0x0)) {
             isOnline = true;
+            DGXContract = address(_DGXAddress);
             dgx = DGXinterface(DGXContract);
         }
 }
