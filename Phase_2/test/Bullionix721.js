@@ -75,7 +75,7 @@ contract("Bullionix721", function(accounts) {
     });
   });
 
-  describe("turnOff", function() {
+  describe("turnOff and turn on", function() {
     it("should fail to change isOnline from non-owner", async function() {
       try {
         await Bullionx721.toggleOnline({
@@ -94,7 +94,7 @@ contract("Bullionix721", function(accounts) {
       }
     });
 
-    it("should successfully setStorageContract", async function() {
+    it("should successfully turn online and offline", async function() {
       await Bullionx721.toggleOnline({
         from: owner
       });
@@ -105,6 +105,99 @@ contract("Bullionix721", function(accounts) {
       });
       await Bullionx721.isOnline.call();
       assert.true(isOnline, "Should be online but is not");
+    });
+  });
+  describe("create new series", function() {
+    const seriesData = {
+      name: "Vitalik Test Token",
+      numberToMint: "10",
+      DGXCost: "10",
+      Fee: "1"
+    };
+
+    before(async function() {
+      const onlineStatus = await Bullionix721.isOnline.call();
+      if (onlineStatus) {
+        await Bullionix721.toggleOnline({
+          from: owner
+        });
+      }
+      const newOnlineStatus = await eRC721Generator.isOnline.call();
+      assert.isFalse(newOnlineStatus, "Failed to turn Generator offline");
+    });
+
+    it("should fail to create new series when offline", async function() {
+      try {
+        await Bullionix721.createNewSeries(
+          seriesData.name,
+          seriesData.numberToMint,
+          seriesData.DGXCost,
+          seriesData.Fee,
+          {
+            from: accounts[2]
+          }
+        );
+        assert.fail(true, "Expected transaction to fail");
+      } catch (e) {
+        assert.exists(
+          e.message || e,
+          "Expected function to fail with an error"
+        );
+        assert.isFalse(
+          (e.message || e) === "assert.fail()",
+          "Expected non-assert failure"
+        );
+      }
+    });
+
+    it("should fail to create new series not from owner and offline", async function() {
+      try {
+        // const
+        const onlineStatus = await Bullionix721.isOnline.call();
+        if (!onlineStatus) {
+          await Bullionix721.toggleOnline({
+            from: owner
+          });
+        }
+        const newOnlineStatus = await Bullionix721.isOnline.call();
+        assert.isTrue(newOnlineStatus, "Failed to turn Generator offline");
+
+        await Bullionix721.createERC721(token.name, token.symbol, token.url, {
+          from: accounts[2]
+        });
+        assert.fail(true, "Expected transaction to fail");
+      } catch (e) {
+        assert.exists(
+          e.message || e,
+          "Expected function to fail with an error"
+        );
+        assert.isFalse(
+          (e.message || e) === "assert.fail()",
+          "Expected non-assert failure"
+        );
+      }
+    });
+
+    it("should successfully create new series", async function() {
+      const onlineStatus = await Bullionix721.isOnline.call();
+      assert.isTrue(onlineStatus, "Generator not online");
+
+      const creation = await Bullionix721.createNewSeries(
+        seriesData.name,
+        seriesData.numberToMint,
+        seriesData.DGXCost,
+        seriesData.Fee,
+        {
+          from: owner
+        }
+      );
+      const newSeries = Bullionix721.seriesToTokenId.call(1);
+      assert.equal(
+        newSeries.DGXCost,
+        seriesData.DGXCost,
+        "Failed to get value from new token series"
+      );
+      assert.exists(newSeries, "Token created  has no value");
     });
   });
 });
