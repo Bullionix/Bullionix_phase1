@@ -231,7 +231,15 @@ function fetchTransferFee() internal returns (uint256 rate){
    
 }
 
-function fetchLastTransfer() internal returns (uint256 _time){
+function fetchLastTransfer(address _user) internal returns (uint256 _payment_date){
+     ( bool _exists,
+        uint256 _raw_balance,
+        uint256 _payment_date,
+        bool _no_demurrage_fee,
+        bool _no_recast_fee,
+        bool _no_transfer_fee ) = dgxStorage.read_user(_user);
+        
+        return _payment_date;
     
 }
 
