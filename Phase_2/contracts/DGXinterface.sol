@@ -81,6 +81,31 @@ function showDemurrageConfigs()
      * Emits a `Transfer` event.
      */
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    
+    /**
+     @dev Returns the user data for an account
+     * Specifically calling this to get the last time of transfer to calculate demurrage fees
+     * 
+     *
+     * Returns bool _exists,
+     * Returns uint256 _raw_balance,
+     * Returns uint256 _payment_date,
+     * Returns bool _no_demurrage_fee,
+     * Returns bool _no_recast_fee,
+     * Returns bool _no_transfer_fee
+     *
+     * Emits a `Transfer` event.
+     **/
+function read_user(address _account)
+        external
+    returns (
+        bool _exists,
+        uint256 _raw_balance,
+        uint256 _payment_date,
+        bool _no_demurrage_fee,
+        bool _no_recast_fee,
+        bool _no_transfer_fee
+    );
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to

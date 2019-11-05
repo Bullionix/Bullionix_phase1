@@ -1,12 +1,11 @@
 pragma solidity >=0.4.22 <0.6.0;
 
-import 'openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol';
-import 'openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol';
-import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
-import 'openzeppelin-solidity/contracts/token/ERC721/IERC721Enumerable.sol';
-import 'openzeppelin-solidity/contracts/token/ERC721/IERC721Metadata.sol';
-import 'openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol';
-import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
+import './ERC721Full.sol';
+import './Ownable.sol';
+import './IERC721Enumerable.sol';
+import './IERC721Metadata.sol';
+import './ERC721MetadataMintable.sol';
+import './SafeMath.sol';
 import './DGXinterface.sol';
 
 
@@ -21,14 +20,17 @@ using SafeMath for uint256;
 * @dev Beginning state and init values
 **/
 DGXinterface dgx; 
+DGXinterface dgxStorage; 
 bool public isOnline = false;
-address payable public  DGXContract; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
+address payable  DGXContract = 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
+address payable  DGXTokenStorage = 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
 string constant  name = "Bullionix";
 string constant  title = "";  //To be filled in
 string constant  symbol = ""; //To be filled in
 string constant  version = "Bullionix v0.2";
 mapping(uint256 => uint256) public StakedValue;
 mapping(uint256 => seriesData) public seriesToTokenId;
+mapping(address => uint256) internal last_payment_timestamp;
 struct seriesData {
                 string url;
                 uint256 numberInSeries;
@@ -45,17 +47,16 @@ event NewSeriesMade(string indexed url, uint256 indexed numberToMint);
 event Staked(address indexed _sender, uint256 indexed _amount, uint256 indexed tokenStaked);
 event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed _tokenId);
 event Withdrawal(address indexed _receiver,  uint256 indexed _amount);
-event PublishFees(uint256 _Beforefees, uint256 _fee);
+
 /*
 * @dev Constructor() and storge init
 * @dev Sets state
-* @param Address _DGXAddress is the address of the live DGX token contract
 **/
-constructor(address payable _DGXAddress) public ERC721Metadata(name, symbol){
-        if (address(_DGXAddress) != address(0x0)) {
+constructor() public ERC721Metadata(name, symbol){
+        if (address(DGXContract) != address(0x0) && address(DGXTokenStorage) != address(0x0)) {
             isOnline = true;
-            DGXContract = address(_DGXAddress);
             dgx = DGXinterface(DGXContract);
+            dgxStorage = DGXinterface(DGXTokenStorage);
         }
 }
 
@@ -135,7 +136,7 @@ function burn(uint256 _tokenId)public payable returns (bool){
      //total fees
      uint256 feeValue = transferFee.add(demurrageFee);
      feeValue = StakedValue[_tokenId].sub(feeValue);
-        require(_checkBalance() >= feeValue, "Balance check failed");
+     require(_checkBalance() >= feeValue, "Balance check failed");
        require(feeValue < StakedValue[_tokenId], "Fee is more than StakedValue");
      seriesToTokenId[_tokenId].alive = false;
         //transfer 721 to 0x000
@@ -175,8 +176,16 @@ function _checkAllowance(address sender, uint256 amountNeeded) internal view ret
 function viewYourTokens() external view  returns (uint256[] memory _yourTokens){
        return super._tokensOfOwner(msg.sender);
 }
-
-
+function setDGXStorage(address payable newAddress) onlyOwner external returns (bool){
+    DGXTokenStorage = newAddress;
+    dgxStorage = DGXinterface(DGXTokenStorage);
+    return true;
+}
+function setDGXContract(address payable newAddress) onlyOwner external returns (bool){
+    DGXContract = newAddress;
+    dgx = DGXinterface(DGXContract);
+    return true;
+}
 // Internals 
 /*
   * TransferForm called after user has approved DGX to be spent by this contract.
@@ -212,23 +221,28 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
     return true;
   }
 
-function() external payable {
 
-}
 
-function fetchTransferFee() public returns (uint256 rate){
+function fetchTransferFee() internal returns (uint256 rate){
   
    (uint256 _base, uint256 _rate, address _collector, bool _no_transfer_fee, uint256 _minimum_transfer_amount) = dgx.showTransferConfigs();
    
-   return _rate*10**5;
+   return _rate.div(_base);
    
 }
 
-function fetchDemurrageFee() public returns (uint256 rate){
+function fetchLastTransfer() internal returns (uint256 _time){
+    
+}
+
+function fetchDemurrageFee() internal returns (uint256 rate){
   
    (uint256 _base, uint256 _rate, address _collector, bool _no_demurrage_fee) = dgx.showDemurrageConfigs();
+   if(!_no_demurrage_fee) return 0;
+   return _rate.div(_base);
    
-   return _rate*10**5;
-   
+}
+function() external payable {
+
 }
 }
