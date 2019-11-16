@@ -25,12 +25,11 @@ bool public isOnline = false;
 address payable  DGXContract = 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
 address payable  DGXTokenStorage = 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
 string constant  name = "Bullionix";
-string constant  title = "";  //To be filled in
-string constant  symbol = ""; //To be filled in
+string constant  title = "Bullionix";  //To be filled in
+string constant  symbol = "BLX"; //To be filled in
 string constant  version = "Bullionix v0.2";
 mapping(uint256 => uint256) public StakedValue;
 mapping(uint256 => seriesData) public seriesToTokenId;
-mapping(address => uint256) internal last_payment_timestamp;
 struct seriesData {
                 string url;
                 uint256 numberInSeries;
@@ -99,18 +98,21 @@ constructor() public ERC721Metadata(name, symbol){
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
       require(seriesToTokenId[_tokenToBuy].fee >= 0 && StakedValue[_tokenToBuy] == 0, "Can't stake to this token!");
       uint256  amountRequired = ((seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee))*10**9);
-        uint256 transferFee = fetchTransferFee();
-       
+      uint256 transferFee = fetchTransferFee();
+      uint256 demurageFee = fetchDemurrageFee(msg.sender);
+      //add demurage fee to transfer fee
+     uint256 totalFees = demurageFee.add(transferFee);
       //require transfer to contract succeeds
-      require(_checkAllowance(msg.sender, amountRequired));
-      require(_transferFromDGX(msg.sender, amountRequired));
+      require(_checkAllowance(msg.sender, amountRequired), "Not enough allowance");
+      require(_transferFromDGX(msg.sender, amountRequired), "Transfer DGX failed");
       //get url 
      string memory fullURL = returnURL(_tokenToBuy);
-     amountRequired = amountRequired.sub(transferFee);
-     require(amountRequired > transferFee, "Math invalid");
-     require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL));
+     amountRequired = amountRequired.sub(totalFees);
+     require(amountRequired > totalFees, "Math invalid");
+     require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL), "Minting NFT failed");
      //staked value is set to DGXCost sent by user minus the total fees 
      StakedValue[_tokenToBuy] = amountRequired;
+     
      emit Staked(msg.sender, StakedValue[_tokenToBuy], _tokenToBuy);
      seriesToTokenId[_tokenToBuy].alive = true;
      return true;
@@ -132,17 +134,17 @@ function burn(uint256 _tokenId)public payable returns (bool){
         //check balance of smart contract
           //get fees to calculate 
      uint256 transferFee = fetchTransferFee();
-     uint256 demurrageFee = fetchDemurrageFee();
+     uint256 demurrageFee = fetchDemurrageFee(address(this));
      //total fees
      uint256 feeValue = transferFee.add(demurrageFee);
-     feeValue = StakedValue[_tokenId].sub(feeValue);
-     require(_checkBalance() >= feeValue, "Balance check failed");
-       require(feeValue < StakedValue[_tokenId], "Fee is more than StakedValue");
+      require(feeValue < StakedValue[_tokenId], "Fee is more than StakedValue");
+     uint256 UserWithdrawal = StakedValue[_tokenId].add(feeValue);
+     require(_checkBalance() >= UserWithdrawal, "Balance check failed");
      seriesToTokenId[_tokenId].alive = false;
         //transfer 721 to 0x000
         _burn(_tokenId);
         //transfer dgx from contract to msg.sender
-    require(dgx.transfer(msg.sender, feeValue));
+    require(dgx.transfer(msg.sender, UserWithdrawal));
          
        return true;
     }
@@ -232,22 +234,32 @@ function fetchTransferFee() internal returns (uint256 rate){
 }
 
 function fetchLastTransfer(address _user) internal returns (uint256 _payment_date){
+    //gets the timestamp from the DGX contract to help calculate the fees 
      ( bool _exists,
         uint256 _raw_balance,
         uint256 _payment_date,
         bool _no_demurrage_fee,
         bool _no_recast_fee,
         bool _no_transfer_fee ) = dgxStorage.read_user(_user);
+        require(_payment_date >= 0 && _payment_date < block.timestamp, "Last payment timestamp is invalid");
         
         return _payment_date;
     
 }
 
-function fetchDemurrageFee() internal returns (uint256 rate){
-  
+function fetchDemurrageFee(address _sender) internal returns (uint256 rate){
+        //calculate the fee taken by DGX using (rate/base)*(timestamp_now - last_payment) / number_of_seconds_in_a_day = demurrage fee
    (uint256 _base, uint256 _rate, address _collector, bool _no_demurrage_fee) = dgx.showDemurrageConfigs();
    if(!_no_demurrage_fee) return 0;
-   return _rate.div(_base);
+   uint demurageFee = _rate.div(_base);
+   //get last transfer date
+   uint256 last_timestamp = fetchLastTransfer(_sender);
+      uint256 daysSinceTransfer = block.timestamp.sub(last_timestamp).div(86400); 
+      require(daysSinceTransfer > 0, "Days since transfer is 0 or less");
+      //calculate total fees
+      //get total demurage fee by taking fee*days
+      uint256 totalFees = demurageFee.mul(daysSinceTransfer);
+   return totalFees;
    
 }
 function() external payable {
