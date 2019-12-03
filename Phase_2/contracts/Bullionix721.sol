@@ -1,11 +1,12 @@
 pragma solidity >=0.4.22 <0.6.0;
 
-import './ERC721Full.sol';
-import './Ownable.sol';
-import './IERC721Enumerable.sol';
-import './IERC721Metadata.sol';
-import './ERC721MetadataMintable.sol';
-import './SafeMath.sol';
+
+import "openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/IERC721Metadata.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/IERC721Enumerable.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import './DGXinterface.sol';
 
 
