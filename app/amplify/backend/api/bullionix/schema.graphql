@@ -1,0 +1,12 @@
+type User @model 
+@key(fields:["email"]) 
+@key(name:"byUsername", fields:["username"], queryField:"byUsername")
+{
+  uid: String!
+  email:String!
+  username: String
+  bio: String
+  ethAddress1:String
+  ethAddress2:String
+  ethAddress3:String
+}
