@@ -1,12 +1,11 @@
 pragma solidity >=0.4.22 <0.6.0;
 
-
-import "openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
-import "openzeppelin-solidity/contracts/token/ERC721/IERC721Metadata.sol";
-import "openzeppelin-solidity/contracts/token/ERC721/IERC721Enumerable.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import './ERC721Full.sol';
+import './Ownable.sol';
+import './IERC721Enumerable.sol';
+import './IERC721Metadata.sol';
+import './ERC721MetadataMintable.sol';
+import './SafeMath.sol';
 import './DGXinterface.sol';
 
 
@@ -23,8 +22,15 @@ using SafeMath for uint256;
 DGXinterface dgx; 
 DGXinterface dgxStorage; 
 bool public isOnline = false;
-address payable  DGXContract = 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
-address payable  DGXTokenStorage = 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //0x692a70D2e424a56D2C6C27aA97D1a86395877b3A; //To be filled in
+/*
+Kovan KDGX token contract - 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce
+Kovan Storage contract - 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6
+
+Mainnet token contract - 
+Mainnet storage contract - 0xC672EC9CF3Be7Ad06Be4C5650812aEc23BBfB7E1
+*/
+address payable public DGXContract = 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce;  //To be filled in
+address payable  public DGXTokenStorage = 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6; //To be filled in
 string constant  name = "Bullionix";
 string constant  title = "Bullionix";  //To be filled in
 string constant  symbol = "BLX"; //To be filled in
@@ -44,8 +50,8 @@ struct seriesData {
 * @dev Events to read when things happen
 **/
 event NewSeriesMade(string indexed url, uint256 indexed numberToMint);
-event Staked(address indexed _sender, uint256 indexed _amount, uint256 indexed tokenStaked);
-event Burned(address indexed _sender,  uint256 indexed _amount, uint256 indexed _tokenId);
+event Staked(address indexed _sender, uint256 _amount, uint256  tokenStaked);
+event Burned(address indexed _sender,  uint256  _amount, uint256  _tokenId);
 event Withdrawal(address indexed _receiver,  uint256 indexed _amount);
 
 /*
@@ -96,7 +102,7 @@ constructor() public ERC721Metadata(name, symbol){
 *
 **/
  function stake(uint256 _tokenToBuy) public payable isActive returns (bool){
-      //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
+      //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.     
       require(seriesToTokenId[_tokenToBuy].fee >= 0 && StakedValue[_tokenToBuy] == 0, "Can't stake to this token!");
       uint256  amountRequired = ((seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee))*10**9);
       uint256 transferFee = fetchTransferFee();
@@ -129,6 +135,7 @@ constructor() public ERC721Metadata(name, symbol){
 function burn(uint256 _tokenId)public payable returns (bool){
         //solhint-disable-next-line max-line-length
         //check token is staked 
+        
         require(StakedValue[_tokenId] > 0 && seriesToTokenId[_tokenId].alive, "NFT not burnable yet");
         //check that you are owner of token
          require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721Burnable: caller is not owner nor approved");
@@ -229,7 +236,9 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
 function fetchTransferFee() internal returns (uint256 rate){
   
    (uint256 _base, uint256 _rate, address _collector, bool _no_transfer_fee, uint256 _minimum_transfer_amount) = dgx.showTransferConfigs();
-   
+   if(_no_transfer_fee){
+       return 0;
+   }
    return _rate.div(_base);
    
 }
@@ -251,7 +260,7 @@ function fetchLastTransfer(address _user) internal returns (uint256 _payment_dat
 function fetchDemurrageFee(address _sender) internal returns (uint256 rate){
         //calculate the fee taken by DGX using (rate/base)*(timestamp_now - last_payment) / number_of_seconds_in_a_day = demurrage fee
    (uint256 _base, uint256 _rate, address _collector, bool _no_demurrage_fee) = dgx.showDemurrageConfigs();
-   if(!_no_demurrage_fee) return 0;
+   if(_no_demurrage_fee) return 0;
    uint demurageFee = _rate.div(_base);
    //get last transfer date
    uint256 last_timestamp = fetchLastTransfer(_sender);

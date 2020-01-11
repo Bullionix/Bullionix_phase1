@@ -58,7 +58,7 @@ contract SimpleERC20Token {
      function showTransferConfigs()
  external
   returns (uint256 _base, uint256 _rate, address _collector, bool _no_transfer_fee, uint256 _minimum_transfer_amount){
-      return (0, 13, 0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c, true, 5000);
+      return (1000, 13, 0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c, true, 5000);
   }
   /// @dev read the demurrage configurations
 /// @return {
@@ -70,7 +70,7 @@ contract SimpleERC20Token {
 function showDemurrageConfigs()
   external
   returns (uint256 _base, uint256 _rate, address _collector, bool _no_demurrage_fee){
-         return (0, 13, 0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c, true);
+         return (100000, 13, 0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c, true);
   }
    
 
