@@ -1,10 +1,10 @@
-const Bullionix721 = artifacts.require("./Bullionix721.sol");
-const DummyToken = artifacts.require("./DummyToken.sol");
+const BullionixGenerator = artifacts.require("./BullionixGenerator.sol");
+const DGXinterface = artifacts.require("./DGXinterface.sol");
 
 const NULL_ADDRESS = 0x0000000000000000000000000000000000000000;
 const ETHER = Math.pow(10, 18);
 
-contract("Bullionix721", function(accounts) {
+contract("BullionixGenerator", function(accounts) {
   const NewSeriesEvent = "NewSeriesMade";
   const StakeEvent = "Staked";
   const FEEs = 13;
@@ -22,19 +22,19 @@ contract("Bullionix721", function(accounts) {
     DummyToken = await DummyToken.new();
     assert(DummyToken.address, "Failed to deploy DummyToken with an address.");
 
-    Bullionx721 = await ERC721Generator.new(DummyToken.address, {
+    BullionixGenerator = await ERC721Generator.new(DummyToken.address, {
       gas: 6420000,
       from: owner
     });
     assert(
-      Bullionx721.address,
-      "Failed to deploy Bullionx721 with an address."
+      BullionixGenerator.address,
+      "Failed to deploy BullionixGenerator with an address."
     );
 
-    const dgx = await Bullionx721.DGXContract.call();
+    const dgx = await BullionixGenerator.DGXContract.call();
     assert.equal(dgx, DummyToken.address, "Wrong address set as DGXContract");
 
-    await DummyToken.approve(Bullionx721.address, 15000000000, {
+    await DummyToken.approve(BullionixGenerator.address, 15000000000, {
       from: owner
     });
     const approved = await DummyToken.allowance.call(
@@ -47,7 +47,7 @@ contract("Bullionix721", function(accounts) {
   describe("changeOwner()", function() {
     it("should fail to changeOwner from non-priviledged account", async function() {
       try {
-        await Bullionx721.transferOwnership(accounts[1], {
+        await BullionixGenerator.transferOwnership(accounts[1], {
           from: accounts[2]
         });
         assert.fail(true, "Expected function to fail");
@@ -61,16 +61,16 @@ contract("Bullionix721", function(accounts) {
     });
 
     it("should changeOwner", async function() {
-      await Bullionx721.transferOwnership(accounts[1], {
+      await BullionixGenerator.transferOwnership(accounts[1], {
         from: owner
       });
-      const newOwner = await Bullionx721.owner.call();
+      const newOwner = await BullionixGenerator.owner.call();
       assert.equal(newOwner, accounts[1], "Failed to successfully changeOwner");
 
-      await Bullionx721.changeOwner(owner, {
+      await BullionixGenerator.changeOwner(owner, {
         from: accounts[1]
       });
-      const finalNewOwner = await Bullionx721.owner.call();
+      const finalNewOwner = await BullionixGenerator.owner.call();
       assert.equal(finalNewOwner, owner, "Failed to successfully changeOwner");
     });
   });
@@ -78,7 +78,7 @@ contract("Bullionix721", function(accounts) {
   describe("turnOff and turn on", function() {
     it("should fail to change isOnline from non-owner", async function() {
       try {
-        await Bullionx721.toggleOnline({
+        await BullionixGenerator.toggleOnline({
           from: accounts[2]
         });
         assert.fail(true, "Expected function to fail");
@@ -95,15 +95,15 @@ contract("Bullionix721", function(accounts) {
     });
 
     it("should successfully turn online and offline", async function() {
-      await Bullionx721.toggleOnline({
+      await BullionixGenerator.toggleOnline({
         from: owner
       });
-      const isOnline = await Bullionx721.isOnline.call();
+      const isOnline = await BullionixGenerator.isOnline.call();
       assert.false(isOnline, "Should be offline but is not");
-      await Bullionx721.toggleOnline({
+      await BullionixGenerator.toggleOnline({
         from: owner
       });
-      await Bullionx721.isOnline.call();
+      await BullionixGenerator.isOnline.call();
       assert.true(isOnline, "Should be online but is not");
     });
   });
