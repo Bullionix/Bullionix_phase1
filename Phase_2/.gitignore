@@ -5,6 +5,7 @@
 /node_modules/openzeppelin-solidity/test
 /node_modules/openzeppelin-solidity/contracts/*/*
 !node_modules/openzeppelin-solidity/contracts/token/ERC721
+!node_modules/openzeppelin-solidity/contracts/ownership
 
 # testing
 /coverage
