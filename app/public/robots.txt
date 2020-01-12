@@ -1,3 +1,0 @@
-Sitemap:https://bullionix.io/sitemap.xml
-User-agent:*
-Disallow:
