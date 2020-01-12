@@ -24,8 +24,12 @@ bool public isOnline = false;
 /*
 Kovan KDGX token contract - 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce
 Kovan Storage contract - 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6
+Kovan TokenInformation - 0x2651586330d05411e6bcecf9c4ff48341e6d02d5
 
-Mainnet token contract - 
+
+Mainnet (storage) = 0xc672ec9cf3be7ad06be4c5650812aec23bbfb7e1
+Mainnet (token)    = 0x4f3afec4e5a3f2a6a1a411def7d7dfe50ee057bf
+Mainnet (token information) = 0xbb246ee3fa95b88b3b55a796346313738c6e0150
 Mainnet storage contract - 0xC672EC9CF3Be7Ad06Be4C5650812aEc23BBfB7E1
 */
 address payable public DGXContract = 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce;  //To be filled in
