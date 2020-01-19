@@ -8,6 +8,18 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import './DGXinterface.sol';
+
+/*
+Kovan KDGX token contract - 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce
+Kovan Storage contract - 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6
+Kovan TokenInformation - 0x2651586330d05411e6bcecF9c4ff48341E6d02D5
+Kovan BLX contract working - 
+
+Mainnet (storage) = 0xc672ec9cf3be7ad06be4c5650812aec23bbfb7e1
+Mainnet (token)    = 0x4f3afec4e5a3f2a6a1a411def7d7dfe50ee057bf
+Mainnet (token information) = 0xbb246ee3fa95b88b3b55a796346313738c6e0150
+Mainnet storage contract - 0xC672EC9CF3Be7Ad06Be4C5650812aEc23BBfB7E1
+*/
 contract BullionixGenerator is ERC721Enumerable, ERC721MetadataMintable, Ownable{
     
 modifier isActive{
@@ -20,19 +32,11 @@ using SafeMath for uint256;
 **/
 DGXinterface dgx; 
 DGXinterface dgxStorage; 
+DGXinterface dgxToken; 
 bool public isOnline = false;
-/*
-Kovan KDGX token contract - 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce
-Kovan Storage contract - 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6
-Kovan TokenInformation - 0x2651586330d05411e6bcecf9c4ff48341e6d02d5
 
-
-Mainnet (storage) = 0xc672ec9cf3be7ad06be4c5650812aec23bbfb7e1
-Mainnet (token)    = 0x4f3afec4e5a3f2a6a1a411def7d7dfe50ee057bf
-Mainnet (token information) = 0xbb246ee3fa95b88b3b55a796346313738c6e0150
-Mainnet storage contract - 0xC672EC9CF3Be7Ad06Be4C5650812aEc23BBfB7E1
-*/
-address payable public DGXContract = 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce;  //To be filled in
+address payable public DGXTokenContract = 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce;
+address payable public DGXContract = 0x2651586330d05411e6bcecF9c4ff48341E6d02D5;  //To be filled in
 address payable  public DGXTokenStorage = 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6; //To be filled in
 string constant  name = "Bullionix";
 string constant  title = "Bullionix";  //To be filled in
@@ -66,6 +70,7 @@ constructor() public ERC721Metadata(name, symbol){
             isOnline = true;
             dgx = DGXinterface(DGXContract);
             dgxStorage = DGXinterface(DGXTokenStorage);
+            dgxToken = DGXinterface(DGXTokenContract);
         }
 }
 
@@ -155,7 +160,7 @@ function burn(uint256 _tokenId)public payable returns (bool){
         //transfer 721 to 0x000
         _burn(_tokenId);
         //transfer dgx from contract to msg.sender
-    require(dgx.transfer(msg.sender, UserWithdrawal));
+    require(dgxToken.transfer(msg.sender, UserWithdrawal));
          
        return true;
     }
@@ -168,17 +173,17 @@ function withdrawal() onlyOwner
   returns (bool){
     require(isOnline == false);
     uint256 temp = _checkBalance(); //calls checkBalance which will revert if no balance, if balance pass it into transfer as amount to withdrawal MAX
-    require(dgx.transfer(msg.sender, temp)); 
+    require(dgxToken.transfer(msg.sender, temp)); 
     emit Withdrawal(msg.sender, temp);
     return true;    
   }
 function _checkBalance() internal view returns (uint256){
-    uint256 tempBalance = dgx.balanceOf(address(this)); //checking balance on DGX contract
+    uint256 tempBalance = dgxToken.balanceOf(address(this)); //checking balance on DGX contract
     require(tempBalance > 0, "Revert: Balance is 0!");  //do I even have a balance? Lets see. If no balance revert. 
     return tempBalance;  //here is your balance! Fresh off the stove. 
 }
 function _checkAllowance(address sender, uint256 amountNeeded) internal view returns (bool){
-    uint256 tempBalance = dgx.allowance(sender, address(this)); //checking balance on DGX contract
+    uint256 tempBalance = dgxToken.allowance(sender, address(this)); //checking balance on DGX contract
     require(tempBalance >= amountNeeded, "Revert: Balance is 0!");  //do I even have a balance? Lets see. If no balance revert. 
     return true;  //here is your balance! Fresh off the stove. 
 } 
@@ -197,6 +202,11 @@ function setDGXStorage(address payable newAddress) onlyOwner external returns (b
 function setDGXContract(address payable newAddress) onlyOwner external returns (bool){
     DGXContract = newAddress;
     dgx = DGXinterface(DGXContract);
+    return true;
+}
+function setDGXTokenContract(address payable newAddress) onlyOwner external returns (bool){
+    DGXContract = newAddress;
+    dgxToken = DGXinterface(DGXContract);
     return true;
 }
 // Internals 
@@ -230,7 +240,7 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
  function _transferFromDGX (address _owner,  uint256 _amount)internal returns (bool)
     
   {
-    require(dgx.transferFrom(_owner, address(this), _amount));
+    require(dgxToken.transferFrom(_owner, address(this), _amount));
     return true;
   }
 
@@ -276,6 +286,6 @@ function fetchDemurrageFee(address _sender) internal returns (uint256 rate){
    
 }
 function() external payable {
-
+  revert("Please call a function");
 }
 }

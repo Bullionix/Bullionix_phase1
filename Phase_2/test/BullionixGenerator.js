@@ -17,7 +17,17 @@ contract("BullionixGenerator", function(accounts) {
   const demurrageFee = 13 * 10 ** 5;
 
   let dgxContract;
-
+  /*
+ function toggleOnline() - DONE
+ fucntion changeOwner() - DONE 
+ function createNewSeries(string memory _url, uint256 _numberToMint, uint256 _DGXcost, uint256 _fee) public onlyOwner isActive returns (bool _success)
+ stake(uint256 _tokenToBuy) public payable isActive returns (bool)
+ function burn(uint256 _tokenId)public payable returns (bool)
+ function withdrawal() onlyOwner public returns (bool)
+function viewYourTokens() external view  returns (uint256[] memory _yourTokens)
+function setDGXStorage(address payable newAddress) onlyOwner external returns (bool)
+function setDGXContract(address payable newAddress) onlyOwner external returns (bool)
+*/
   before(async function() {
     DummyToken = await DummyToken.new();
     assert(DummyToken.address, "Failed to deploy DummyToken with an address.");
@@ -111,7 +121,7 @@ contract("BullionixGenerator", function(accounts) {
     const seriesData = {
       name: "Vitalik Test Token",
       numberToMint: "10",
-      DGXCost: "10",
+      DGXCost: "1",
       Fee: "1"
     };
 
