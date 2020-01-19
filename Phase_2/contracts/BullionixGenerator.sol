@@ -20,7 +20,7 @@ Mainnet (token)    = 0x4f3afec4e5a3f2a6a1a411def7d7dfe50ee057bf
 Mainnet (token information) = 0xbb246ee3fa95b88b3b55a796346313738c6e0150
 Mainnet storage contract - 0xC672EC9CF3Be7Ad06Be4C5650812aEc23BBfB7E1
 */
-contract BullionixGenerator is ERC721Enumerable, ERC721MetadataMintable, Ownable{
+contract BullionixGenerator is ERC721Enumerable, ERC721MetadataMintable, ERC721Burnable, Ownable{
     
 modifier isActive{
     require(isOnline == true);
@@ -34,7 +34,17 @@ DGXinterface dgx;
 DGXinterface dgxStorage; 
 DGXinterface dgxToken; 
 bool public isOnline = false;
+/*
+Kovan KDGX token contract - 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce
+Kovan Storage contract - 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6
+Kovan TokenInformation - 0x2651586330d05411e6bcecF9c4ff48341E6d02D5
 
+
+Mainnet (storage) = 0xc672ec9cf3be7ad06be4c5650812aec23bbfb7e1
+Mainnet (token)    = 0x4f3afec4e5a3f2a6a1a411def7d7dfe50ee057bf
+Mainnet (token information) = 0xbb246ee3fa95b88b3b55a796346313738c6e0150
+Mainnet storage contract - 0xC672EC9CF3Be7Ad06Be4C5650812aEc23BBfB7E1
+*/
 address payable public DGXTokenContract = 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce;
 address payable public DGXContract = 0x2651586330d05411e6bcecF9c4ff48341E6d02D5;  //To be filled in
 address payable  public DGXTokenStorage = 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6; //To be filled in
@@ -60,7 +70,7 @@ event NewSeriesMade(string indexed url, uint256 indexed numberToMint);
 event Staked(address indexed _sender, uint256 _amount, uint256  tokenStaked);
 event Burned(address indexed _sender,  uint256  _amount, uint256  _tokenId);
 event Withdrawal(address indexed _receiver,  uint256 indexed _amount);
-
+event CheckFees (uint256 indexed transferFee, uint256 indexed _demurage, uint256 indexed _totalWithdrawal);
 /*
 * @dev Constructor() and storge init
 * @dev Sets state
@@ -140,7 +150,7 @@ constructor() public ERC721Metadata(name, symbol){
      */
      
      //TODO: Finalize this function and transfer the DGX back to msg.sender for burning their nft 
-function burn(uint256 _tokenId)public payable returns (bool){
+function burnStake(uint256 _tokenId)public payable returns (bool){
         //solhint-disable-next-line max-line-length
         //check token is staked 
         
@@ -154,17 +164,27 @@ function burn(uint256 _tokenId)public payable returns (bool){
      //total fees
      uint256 feeValue = transferFee.add(demurrageFee);
       require(feeValue < StakedValue[_tokenId], "Fee is more than StakedValue");
-     uint256 UserWithdrawal = StakedValue[_tokenId].add(feeValue);
+     uint256 UserWithdrawal = StakedValue[_tokenId].sub(feeValue);
      require(_checkBalance() >= UserWithdrawal, "Balance check failed");
      seriesToTokenId[_tokenId].alive = false;
         //transfer 721 to 0x000
         _burn(_tokenId);
         //transfer dgx from contract to msg.sender
     require(dgxToken.transfer(msg.sender, UserWithdrawal));
-         
+    emit Burned(msg.sender, UserWithdrawal, _tokenId);
        return true;
     }
     
+    function checkFeesForBurn(uint256 _tokenId) public payable returns (uint256){
+          require(StakedValue[_tokenId] > 0 && seriesToTokenId[_tokenId].alive, "NFT not burnable yet");
+          uint256 transferFee = fetchTransferFee();
+     uint256 demurrageFee = fetchDemurrageFee(address(this));
+     //total fees
+     uint256 feeValue = transferFee.add(demurrageFee);
+      require(feeValue < StakedValue[_tokenId], "Fee is more than StakedValue");
+     uint256 UserWithdrawal = StakedValue[_tokenId].sub(feeValue);
+    emit CheckFees(transferFee, demurrageFee, UserWithdrawal);
+    }
       /**
      * @dev Withdrawals DGX from the balance collected via fees only Owner.
      */
