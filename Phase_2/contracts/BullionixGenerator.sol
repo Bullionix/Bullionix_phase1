@@ -9,17 +9,7 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol"
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import './DGXinterface.sol';
 
-/*
-Kovan KDGX token contract - 0xAEd4fc9663420eC8a6c892065BBA49c935581Dce
-Kovan Storage contract - 0x3c5E7435190ecd13C88F3600Ca317A1A5FdD2Ae6
-Kovan TokenInformation - 0x2651586330d05411e6bcecF9c4ff48341E6d02D5
-Kovan BLX contract working - 
 
-Mainnet (storage) = 0xc672ec9cf3be7ad06be4c5650812aec23bbfb7e1
-Mainnet (token)    = 0x4f3afec4e5a3f2a6a1a411def7d7dfe50ee057bf
-Mainnet (token information) = 0xbb246ee3fa95b88b3b55a796346313738c6e0150
-Mainnet storage contract - 0xC672EC9CF3Be7Ad06Be4C5650812aEc23BBfB7E1
-*/
 contract BullionixGenerator is ERC721Enumerable, ERC721MetadataMintable, ERC721Burnable, Ownable{
     
 modifier isActive{
@@ -54,6 +44,7 @@ string constant  symbol = "BLX"; //To be filled in
 string constant  version = "Bullionix v0.2";
 mapping(uint256 => uint256) public StakedValue;
 mapping(uint256 => seriesData) public seriesToTokenId;
+uint256  public totalSeries = 0;
 struct seriesData {
                 string url;
                 uint256 numberInSeries;
@@ -70,7 +61,10 @@ event NewSeriesMade(string indexed url, uint256 indexed numberToMint);
 event Staked(address indexed _sender, uint256 _amount, uint256  tokenStaked);
 event Burned(address indexed _sender,  uint256  _amount, uint256  _tokenId);
 event Withdrawal(address indexed _receiver,  uint256 indexed _amount);
-event CheckFees (uint256 indexed transferFee, uint256 indexed _demurage, uint256 indexed _totalWithdrawal);
+event TransferFee (uint256 indexed transferFee);
+event DemurrageFee (uint256 indexed demurrageFee);
+event CheckFees (uint256 indexed feeValue, uint256 indexed stakedValue, uint256 indexed _totalWithdrawal);
+
 /*
 * @dev Constructor() and storge init
 * @dev Sets state
@@ -103,12 +97,14 @@ constructor() public ERC721Metadata(name, symbol){
  function createNewSeries(string memory _url, uint256 _numberToMint, uint256 _DGXcost, uint256 _fee) public onlyOwner isActive returns (bool _success){
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.
       require(msg.sender == owner(), 'Only Owner'); //optional as onlyOwner Modifier is used 
-      uint256 total = totalSupply();
-      for(uint i = 0; i < _numberToMint; i++){
-          seriesToTokenId[total.add(i)].url = _url;
-          seriesToTokenId[total.add(i)].numberInSeries = _numberToMint;
-          seriesToTokenId[total.add(i)].DGXcost = _DGXcost;
-          seriesToTokenId[total.add(i)].fee = _fee;
+        uint256 total = totalSeries;
+      uint tempNumber = _numberToMint.add(totalSeries);
+      for(uint i = total; i < tempNumber; i++){
+          seriesToTokenId[i].url = _url;
+          seriesToTokenId[i].numberInSeries = _numberToMint;
+          seriesToTokenId[i].DGXcost = _DGXcost;
+          seriesToTokenId[i].fee = _fee;
+          totalSeries = totalSeries.add(1);
       }
     
    emit NewSeriesMade(_url, _numberToMint);
@@ -122,22 +118,24 @@ constructor() public ERC721Metadata(name, symbol){
  function stake(uint256 _tokenToBuy) public payable isActive returns (bool){
       //takes input from admin to create a new nft series. Will have to define how many tokens to make, how much DGX they cost, and the url from s3.     
       require(seriesToTokenId[_tokenToBuy].fee >= 0 && StakedValue[_tokenToBuy] == 0, "Can't stake to this token!");
-      uint256  amountRequired = ((seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee))*10**9);
-      uint256 transferFee = fetchTransferFee();
+      uint256  amountRequired = ((seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee)));
+      uint256 transferFee = fetchTransferFee(amountRequired);
+      transferFee = transferFee.mul(2);
       uint256 demurageFee = fetchDemurrageFee(msg.sender);
       //add demurage fee to transfer fee
-     uint256 totalFees = demurageFee.add(transferFee);
+     uint256 totalFees = transferFee.add(demurageFee);
+     amountRequired = amountRequired.sub(totalFees);
       //require transfer to contract succeeds
       require(_checkAllowance(msg.sender, amountRequired), "Not enough allowance");
       require(_transferFromDGX(msg.sender, amountRequired), "Transfer DGX failed");
       //get url 
      string memory fullURL = returnURL(_tokenToBuy);
-     amountRequired = amountRequired.sub(totalFees);
+     
+     emit CheckFees(totalFees, amountRequired, ((seriesToTokenId[_tokenToBuy].DGXcost.add(seriesToTokenId[_tokenToBuy].fee))));
      require(amountRequired > totalFees, "Math invalid");
      require(mintWithTokenURI(msg.sender, _tokenToBuy, fullURL), "Minting NFT failed");
      //staked value is set to DGXCost sent by user minus the total fees 
      StakedValue[_tokenToBuy] = amountRequired;
-     
      emit Staked(msg.sender, StakedValue[_tokenToBuy], _tokenToBuy);
      seriesToTokenId[_tokenToBuy].alive = true;
      return true;
@@ -159,12 +157,13 @@ function burnStake(uint256 _tokenId)public payable returns (bool){
          require(_isApprovedOrOwner(msg.sender, _tokenId), "ERC721Burnable: caller is not owner nor approved");
         //check balance of smart contract
           //get fees to calculate 
-     uint256 transferFee = fetchTransferFee();
+     uint256 transferFee = fetchTransferFee(StakedValue[_tokenId]);
      uint256 demurrageFee = fetchDemurrageFee(address(this));
      //total fees
      uint256 feeValue = transferFee.add(demurrageFee);
       require(feeValue < StakedValue[_tokenId], "Fee is more than StakedValue");
      uint256 UserWithdrawal = StakedValue[_tokenId].sub(feeValue);
+       UserWithdrawal = UserWithdrawal.sub((seriesToTokenId[_tokenId].fee));
      require(_checkBalance() >= UserWithdrawal, "Balance check failed");
      seriesToTokenId[_tokenId].alive = false;
         //transfer 721 to 0x000
@@ -176,14 +175,15 @@ function burnStake(uint256 _tokenId)public payable returns (bool){
     }
     
     function checkFeesForBurn(uint256 _tokenId) public payable returns (uint256){
-          require(StakedValue[_tokenId] > 0 && seriesToTokenId[_tokenId].alive, "NFT not burnable yet");
-          uint256 transferFee = fetchTransferFee();
+        
+          uint256 transferFee = fetchTransferFee((seriesToTokenId[_tokenId].DGXcost.add(seriesToTokenId[_tokenId].fee)));
      uint256 demurrageFee = fetchDemurrageFee(address(this));
      //total fees
      uint256 feeValue = transferFee.add(demurrageFee);
-      require(feeValue < StakedValue[_tokenId], "Fee is more than StakedValue");
-     uint256 UserWithdrawal = StakedValue[_tokenId].sub(feeValue);
-    emit CheckFees(transferFee, demurrageFee, UserWithdrawal);
+      
+     uint256 UserWithdrawal =((seriesToTokenId[_tokenId].DGXcost.add(seriesToTokenId[_tokenId].fee)).sub(feeValue));
+     UserWithdrawal = UserWithdrawal.sub((seriesToTokenId[_tokenId].fee));
+    emit CheckFees(feeValue, (seriesToTokenId[_tokenId].DGXcost.add(seriesToTokenId[_tokenId].fee)), UserWithdrawal);
     }
       /**
      * @dev Withdrawals DGX from the balance collected via fees only Owner.
@@ -266,13 +266,14 @@ function returnURL(uint256 _tokenId) internal view returns (string memory _URL){
 
 
 
-function fetchTransferFee() internal returns (uint256 rate){
+function fetchTransferFee(uint256 _amountToBeTransferred) internal returns (uint256 rate){
   
    (uint256 _base, uint256 _rate, address _collector, bool _no_transfer_fee, uint256 _minimum_transfer_amount) = dgx.showTransferConfigs();
    if(_no_transfer_fee){
        return 0;
    }
-   return _rate.div(_base);
+   emit TransferFee( _rate.mul(_amountToBeTransferred).div(_base));
+   return _rate.mul(_amountToBeTransferred).div(_base);
    
 }
 
@@ -294,14 +295,14 @@ function fetchDemurrageFee(address _sender) internal returns (uint256 rate){
         //calculate the fee taken by DGX using (rate/base)*(timestamp_now - last_payment) / number_of_seconds_in_a_day = demurrage fee
    (uint256 _base, uint256 _rate, address _collector, bool _no_demurrage_fee) = dgx.showDemurrageConfigs();
    if(_no_demurrage_fee) return 0;
-   uint demurageFee = _rate.div(_base);
    //get last transfer date
    uint256 last_timestamp = fetchLastTransfer(_sender);
-      uint256 daysSinceTransfer = block.timestamp.sub(last_timestamp).div(86400); 
-      require(daysSinceTransfer > 0, "Days since transfer is 0 or less");
+      uint256 daysSinceTransfer = block.timestamp.sub(last_timestamp); 
+      
       //calculate total fees
       //get total demurage fee by taking fee*days
-      uint256 totalFees = demurageFee.mul(daysSinceTransfer);
+      uint256 totalFees = ((_rate*10**8).div(_base).mul(daysSinceTransfer).div(86400));
+      emit DemurrageFee(totalFees);
    return totalFees;
    
 }
